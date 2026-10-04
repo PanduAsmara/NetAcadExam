@@ -213,40 +213,111 @@ function renderCurrentQuestion() {
     imgBox.classList.add('hidden');
   }
 
-  // Shuffled Options (Jawaban yang Acak)
+  // Packet Tracer Download Banner
+  const ptBox = document.getElementById('q-pt-container');
+  const ptLink = document.getElementById('q-pt-link');
+  if (ptBox && ptLink) {
+    if (q.ptDownloadUrl) {
+      ptLink.href = q.ptDownloadUrl;
+      ptBox.classList.remove('hidden');
+    } else {
+      ptBox.classList.add('hidden');
+    }
+  }
+
+  // Options vs Matching Table
   const options = quizEngine.getCurrentOptions();
   const selectedKeys = quizEngine.getSelectedKeys(q.id);
   const optionsContainer = document.getElementById('q-options-container');
-  optionsContainer.innerHTML = '';
+  const matchContainer = document.getElementById('q-matching-container');
+  const matchTable = document.getElementById('q-matching-table');
 
   const isCheckedInStudyMode = (quizEngine.mode === 'study' && selectedKeys.length > 0 && !document.getElementById('explanation-box').classList.contains('hidden'));
 
-  options.forEach(opt => {
-    const isSelected = selectedKeys.includes(opt.shuffledKey);
-    let extraClass = '';
+  if (q.type === 'matching' && q.matchingData) {
+    // Show matching table, hide standard options
+    if (optionsContainer) optionsContainer.classList.add('hidden');
+    if (matchContainer) matchContainer.classList.remove('hidden');
 
-    if (isCheckedInStudyMode || quizEngine.isExamSubmitted) {
-      if (opt.isCorrect) {
-        extraClass = 'correct-answer';
-      } else if (isSelected && !opt.isCorrect) {
-        extraClass = 'wrong-answer';
-      }
+    const userMatches = quizEngine.getMatchingAnswers(q.id);
+    const isChecked = isCheckedInStudyMode || quizEngine.isExamSubmitted;
+
+    if (matchTable) {
+      matchTable.innerHTML = '';
+      q.matchingData.situations.forEach((sit, sIdx) => {
+        const userChoice = userMatches[sit.id] || '';
+        const isCorrectMatch = (userChoice === sit.correctMedia);
+
+        let statusBorder = 'border-black/20 bg-white';
+        let statusBadge = '';
+        if (isChecked && userChoice) {
+          if (isCorrectMatch) {
+            statusBorder = 'border-emerald-600 bg-emerald-50';
+            statusBadge = `<span class="text-xs font-black text-emerald-800">✅ Cocok (${sit.correctMedia})</span>`;
+          } else {
+            statusBorder = 'border-rose-600 bg-rose-50';
+            statusBadge = `<span class="text-xs font-black text-rose-800">❌ Salah (Seharusnya: ${sit.correctMedia})</span>`;
+          }
+        } else if (isChecked && !userChoice) {
+          statusBorder = 'border-amber-600 bg-amber-50';
+          statusBadge = `<span class="text-xs font-black text-amber-800">⚠️ Belum dipilih (${sit.correctMedia})</span>`;
+        }
+
+        const row = document.createElement('div');
+        row.className = `p-3.5 rounded-xl border-2 ${statusBorder} flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm`;
+        row.innerHTML = `
+          <div class="text-xs sm:text-sm font-bold text-black flex-1">
+            <span class="inline-block w-6 h-6 rounded-full bg-black text-[#FED000] text-center leading-6 text-xs font-black mr-2">${sIdx + 1}</span>
+            ${sit.text}
+          </div>
+          <div class="flex items-center gap-2">
+            ${statusBadge}
+            <select onchange="onSelectMatchingChoice(${q.id}, ${sit.id}, this.value)" class="mixd-select text-xs font-bold py-2 px-3 border-2 border-black rounded-lg bg-[#FED000]/20 text-black cursor-pointer shadow-sm" ${quizEngine.isExamSubmitted ? 'disabled' : ''}>
+              <option value="">-- Pilih Media Jaringan --</option>
+              ${q.matchingData.mediaOptions.map(m => `
+                <option value="${m}" ${userChoice === m ? 'selected' : ''}>${m}</option>
+              `).join('')}
+            </select>
+          </div>
+        `;
+        matchTable.appendChild(row);
+      });
     }
+  } else {
+    // Standard multiple choice / single choice options
+    if (matchContainer) matchContainer.classList.add('hidden');
+    if (optionsContainer) {
+      optionsContainer.classList.remove('hidden');
+      optionsContainer.innerHTML = '';
 
-    const card = document.createElement('div');
-    card.className = `mixd-option ${isSelected ? 'selected' : ''} ${extraClass}`;
-    card.onclick = () => onSelectOption(opt.shuffledKey);
+      options.forEach(opt => {
+        const isSelected = selectedKeys.includes(opt.shuffledKey);
+        let extraClass = '';
 
-    card.innerHTML = `
-      <span class="mixd-option-letter">${opt.shuffledKey}</span>
-      <div class="flex-1 text-xs sm:text-sm font-bold leading-relaxed">
-        ${opt.text}
-      </div>
-      ${isSelected ? `<span class="font-black text-sm">✓</span>` : ''}
-    `;
+        if (isCheckedInStudyMode || quizEngine.isExamSubmitted) {
+          if (opt.isCorrect) {
+            extraClass = 'correct-answer';
+          } else if (isSelected && !opt.isCorrect) {
+            extraClass = 'wrong-answer';
+          }
+        }
 
-    optionsContainer.appendChild(card);
-  });
+        const card = document.createElement('div');
+        card.className = `mixd-option ${isSelected ? 'selected' : ''} ${extraClass}`;
+        card.onclick = () => onSelectOption(opt.shuffledKey);
+
+        card.innerHTML = `
+          <span class="mixd-option-letter">${opt.shuffledKey}</span>
+          <div class="flex-1 text-xs sm:text-sm font-bold leading-relaxed">
+            ${opt.text}
+          </div>
+          ${isSelected ? `<span class="font-black text-sm">✓</span>` : ''}
+        `;
+
+        optionsContainer.appendChild(card);
+      });
+    }
+  }
 
   // Next / Prev buttons
   document.getElementById('btn-prev').disabled = (quizEngine.currentIndex === 0);
@@ -275,6 +346,12 @@ function renderCurrentQuestion() {
   updateNavigatorGrid();
 }
 
+function onSelectMatchingChoice(qId, sitId, val) {
+  if (quizEngine.isExamSubmitted) return;
+  quizEngine.setMatchingAnswer(qId, sitId, val);
+  renderCurrentQuestion();
+}
+
 function onSelectOption(key) {
   if (quizEngine.isExamSubmitted) return;
   const q = quizEngine.getCurrentQuestion();
@@ -291,10 +368,24 @@ function onSelectOption(key) {
 function checkAnswerInstant() {
   const q = quizEngine.getCurrentQuestion();
   if (!q) return;
-  const selectedKeys = quizEngine.getSelectedKeys(q.id);
 
+  if (q.type === 'matching' && q.matchingData) {
+    const userMatches = quizEngine.getMatchingAnswers(q.id);
+    const answeredCount = Object.keys(userMatches).filter(k => userMatches[k]).length;
+    if (answeredCount === 0) {
+      alert('Silakan pilih salah satu pasangan media jaringan pada tabel terlebih dahulu.');
+      return;
+    }
+    const options = quizEngine.getCurrentOptions();
+    renderExplanationBox(q, options, ['MATCHED']);
+    renderCurrentQuestion();
+    updateNavigatorGrid();
+    return;
+  }
+
+  const selectedKeys = quizEngine.getSelectedKeys(q.id);
   if (!selectedKeys.length) {
-    alert('Silakan pilih salah satu jawaban terlebih dahulu.');
+    alert('Silakan pilih jawaban terlebih dahulu.');
     return;
   }
 
@@ -326,44 +417,63 @@ function renderExplanationBox(q, options, selectedKeys) {
   document.getElementById('exp-core-text').textContent = q.explanationId || 'Pertanyaan ini menguji pemahaman konsep fundamental standar Cisco.';
   document.getElementById('exp-takeaway-text').textContent = q.keyTakeaway || 'Pahami perbedaan fungsi layer dan protokol hardware.';
 
-  // Build Option-by-Option breakdown
+  // Build Option-by-Option or Matching breakdown
   const breakdownContainer = document.getElementById('exp-options-breakdown');
   breakdownContainer.innerHTML = '';
 
-  options.forEach(opt => {
-    const isThisSelected = selectedKeys.includes(opt.shuffledKey);
-    const item = document.createElement('div');
-    
-    if (opt.isCorrect) {
-      item.className = 'p-4 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-xs sm:text-sm';
+  if (q.type === 'matching' && q.matchingData) {
+    const userMatches = quizEngine.getMatchingAnswers(q.id);
+    q.matchingData.situations.forEach((sit, sIdx) => {
+      const userChoice = userMatches[sit.id] || 'Belum dipilih';
+      const isCorrectMatch = (userChoice === sit.correctMedia);
+      const item = document.createElement('div');
+      item.className = `p-4 rounded-xl border-2 ${isCorrectMatch ? 'border-emerald-600 bg-emerald-50' : 'border-rose-600 bg-rose-50'} text-xs sm:text-sm`;
       item.innerHTML = `
-        <div class="flex items-center gap-2 font-display font-black text-emerald-950 mb-1.5">
-          <span class="w-6 h-6 rounded bg-emerald-600 text-white font-mono text-xs flex items-center justify-center font-bold">${opt.shuffledKey}</span>
-          <span class="uppercase tracking-wider">🟢 PILIHAN BENAR:</span>
-          ${isThisSelected ? '<span class="text-[10px] bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded-full font-black uppercase tracking-wider border border-emerald-400">(Pilihan Anda)</span>' : ''}
+        <div class="flex items-center justify-between mb-1.5 font-display font-black text-black">
+          <span class="uppercase tracking-wider">${isCorrectMatch ? '🟢 COCOK' : '🔴 TIDAK SESUAI'}: ${sit.text}</span>
+          <span class="text-[11px] px-2 py-0.5 rounded font-mono font-bold ${isCorrectMatch ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}">${isCorrectMatch ? 'BENAR' : 'SALAH'}</span>
         </div>
-        <p class="font-extrabold text-black mb-2 text-sm">"${opt.text}"</p>
-        <p class="text-emerald-950 text-xs leading-relaxed font-semibold">
-          <strong>Kenapa Benar:</strong> ${opt.why.replace(/^BENAR:\s*/, '')}
-        </p>
+        <p class="text-xs text-black/90 mb-1 font-semibold">Pilihan Anda: <strong>${userChoice}</strong> | Jawaban Resmi: <strong class="text-emerald-800">${sit.correctMedia}</strong></p>
+        <p class="text-xs leading-relaxed font-medium text-black/80"><strong>Alasan:</strong> ${sit.explanation}</p>
       `;
-    } else {
-      item.className = `p-4 rounded-xl border-2 ${isThisSelected ? 'border-rose-600 bg-rose-50' : 'border-black/20 bg-white'} text-xs sm:text-sm`;
-      item.innerHTML = `
-        <div class="flex items-center gap-2 font-display font-black ${isThisSelected ? 'text-rose-950' : 'text-black'} mb-1.5">
-          <span class="w-6 h-6 rounded ${isThisSelected ? 'bg-rose-600 text-white' : 'bg-black/15 text-black border border-black/30'} font-mono text-xs flex items-center justify-center font-bold">${opt.shuffledKey}</span>
-          <span class="uppercase tracking-wider">🔴 PILIHAN SALAH:</span>
-          ${isThisSelected ? '<span class="text-[10px] bg-rose-200 text-rose-950 px-2 py-0.5 rounded-full font-black uppercase tracking-wider border border-rose-400">(Pilihan Anda yang Salah)</span>' : ''}
-        </div>
-        <p class="font-extrabold text-black mb-2 text-sm">"${opt.text}"</p>
-        <p class="text-black/85 text-xs leading-relaxed font-semibold">
-          <strong>Kenapa Salah:</strong> ${opt.why.replace(/^SALAH:\s*/, '')}
-        </p>
-      `;
-    }
+      breakdownContainer.appendChild(item);
+    });
+  } else {
+    options.forEach(opt => {
+      const isThisSelected = selectedKeys.includes(opt.shuffledKey);
+      const item = document.createElement('div');
+      
+      if (opt.isCorrect) {
+        item.className = 'p-4 rounded-xl border-2 border-emerald-600 bg-emerald-50 text-xs sm:text-sm';
+        item.innerHTML = `
+          <div class="flex items-center gap-2 font-display font-black text-emerald-950 mb-1.5">
+            <span class="w-6 h-6 rounded bg-emerald-600 text-white font-mono text-xs flex items-center justify-center font-bold">${opt.shuffledKey}</span>
+            <span class="uppercase tracking-wider">🟢 PILIHAN BENAR:</span>
+            ${isThisSelected ? '<span class="text-[10px] bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded-full font-black uppercase tracking-wider border border-emerald-400">(Pilihan Anda)</span>' : ''}
+          </div>
+          <p class="font-extrabold text-black mb-2 text-sm">"${opt.text}"</p>
+          <p class="text-emerald-950 text-xs leading-relaxed font-semibold">
+            <strong>Kenapa Benar:</strong> ${opt.why.replace(/^BENAR:\s*/, '')}
+          </p>
+        `;
+      } else {
+        item.className = `p-4 rounded-xl border-2 ${isThisSelected ? 'border-rose-600 bg-rose-50' : 'border-black/20 bg-white'} text-xs sm:text-sm`;
+        item.innerHTML = `
+          <div class="flex items-center gap-2 font-display font-black ${isThisSelected ? 'text-rose-950' : 'text-black'} mb-1.5">
+            <span class="w-6 h-6 rounded ${isThisSelected ? 'bg-rose-600 text-white' : 'bg-black/15 text-black border border-black/30'} font-mono text-xs flex items-center justify-center font-bold">${opt.shuffledKey}</span>
+            <span class="uppercase tracking-wider">🔴 PILIHAN SALAH:</span>
+            ${isThisSelected ? '<span class="text-[10px] bg-rose-200 text-rose-950 px-2 py-0.5 rounded-full font-black uppercase tracking-wider border border-rose-400">(Pilihan Anda yang Salah)</span>' : ''}
+          </div>
+          <p class="font-extrabold text-black mb-2 text-sm">"${opt.text}"</p>
+          <p class="text-black/85 text-xs leading-relaxed font-semibold">
+            <strong>Kenapa Salah:</strong> ${opt.why.replace(/^SALAH:\s*/, '')}
+          </p>
+        `;
+      }
 
-    breakdownContainer.appendChild(item);
-  });
+      breakdownContainer.appendChild(item);
+    });
+  }
 
   expBox.classList.remove('hidden');
 }
@@ -586,6 +696,32 @@ function filterBankQuestions() {
       <p class="text-xs text-black/80 italic font-semibold mb-3">${q.titleId}</p>
 
       ${q.image ? `<div class="my-3"><img src="${q.image}" class="max-h-48 object-contain rounded border-2 border-black/20 shadow-sm"></div>` : ''}
+
+      ${q.ptDownloadUrl ? `
+        <div class="my-3 p-3 bg-black text-[#FED000] rounded-xl flex flex-col sm:flex-row items-center justify-between gap-3 border-2 border-black">
+          <div class="flex items-center gap-2">
+            <span class="text-xl">📦</span>
+            <span class="text-xs font-bold text-white uppercase tracking-wider">File Lab Cisco Packet Tracer (.pkt) Tersedia</span>
+          </div>
+          <a href="${q.ptDownloadUrl}" target="_blank" rel="noopener noreferrer" class="mixd-btn-primary text-xs py-1.5 px-3.5 whitespace-nowrap font-black">
+            Download .PKT 📥
+          </a>
+        </div>
+      ` : ''}
+
+      ${q.matchingData ? `
+        <div class="my-3 p-3.5 bg-black/5 rounded-xl border border-black/20 text-xs">
+          <strong class="font-display font-black uppercase tracking-wider block mb-2 text-black">Tabel Pencocokan Situasi & Media:</strong>
+          <div class="space-y-1.5">
+            ${q.matchingData.situations.map(s => `
+              <div class="flex items-center justify-between p-2 bg-white rounded-lg border border-black/15">
+                <span><strong>${s.text}</strong></span>
+                <span class="font-mono font-bold px-2 py-0.5 bg-black text-[#FED000] rounded text-[11px]">${s.correctMedia}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      ` : ''}
 
       <div id="detail-${q.id}" class="mt-4 pt-4 border-t-2 border-black/15 space-y-3">
         <div class="text-[11px] font-black uppercase tracking-widest text-black/70 mb-2">Pilihan & Bedah Tiap Opsi:</div>

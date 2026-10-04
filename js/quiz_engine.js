@@ -7,6 +7,7 @@ class QuizEngine {
     this.activeQuestions = [];
     this.currentIndex = 0;
     this.userAnswers = {}; // { questionId: [selectedKey, ...] }
+    this.matchingAnswers = {}; // { questionId: { situationId: media } }
     this.shuffledOptionsMap = {}; // { questionId: [shuffledOptions] }
     const savedBookmarks = (typeof localStorage !== 'undefined') ? JSON.parse(localStorage.getItem('ccna_bookmarks') || '[]') : [];
     this.bookmarks = new Set(savedBookmarks);
@@ -42,6 +43,7 @@ class QuizEngine {
     this.filterModule = module;
     this.isExamSubmitted = false;
     this.userAnswers = {};
+    this.matchingAnswers = {};
     this.shuffledOptionsMap = {};
 
     // Filter berdasarkan modul
@@ -132,6 +134,27 @@ class QuizEngine {
     }
   }
 
+  // Pilih jawaban untuk matching question
+  setMatchingAnswer(qId, situationId, selectedMedia) {
+    if (!this.matchingAnswers) this.matchingAnswers = {};
+    if (!this.matchingAnswers[qId]) this.matchingAnswers[qId] = {};
+    this.matchingAnswers[qId][situationId] = selectedMedia;
+
+    const q = this.activeQuestions.find(item => item.id === qId);
+    const totalSituations = (q && q.matchingData) ? q.matchingData.situations.length : 6;
+    const answeredCount = Object.keys(this.matchingAnswers[qId]).filter(k => this.matchingAnswers[qId][k]).length;
+    if (answeredCount === totalSituations) {
+      this.userAnswers[qId] = ['MATCHED'];
+    } else {
+      this.userAnswers[qId] = answeredCount > 0 ? ['PARTIAL'] : [];
+    }
+  }
+
+  getMatchingAnswers(qId) {
+    if (!this.matchingAnswers) return {};
+    return this.matchingAnswers[qId] || {};
+  }
+
   getSelectedKeys(qId) {
     return this.userAnswers[qId] || [];
   }
@@ -140,6 +163,14 @@ class QuizEngine {
   isQuestionCorrect(qId) {
     const q = this.activeQuestions.find(item => item.id === qId);
     if (!q) return false;
+
+    // Matching Question logic
+    if (q.type === 'matching' && q.matchingData) {
+      const userMatches = this.matchingAnswers ? this.matchingAnswers[qId] : null;
+      if (!userMatches) return false;
+      return q.matchingData.situations.every(s => userMatches[s.id] === s.correctMedia);
+    }
+
     const opts = this.shuffledOptionsMap[qId] || q.options;
     const selected = this.userAnswers[qId] || [];
 

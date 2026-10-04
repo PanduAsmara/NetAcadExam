@@ -55,7 +55,7 @@
         KUIS SOAL
       </button>
       <button id="nav-btn-bank" onclick="switchMainTab('bank')" class="mixd-nav-link">
-        BANK 70 SOAL
+        BANK 80 SOAL
       </button>
       <button id="nav-btn-stats" onclick="switchMainTab('stats')" class="mixd-nav-link">
         STATISTIK
@@ -165,10 +165,11 @@
             <div class="flex items-center gap-1.5">
               <span class="font-bold uppercase tracking-wider text-black">Jumlah:</span>
               <select id="filter-count-select" onchange="restartQuizWithSettings()" class="bg-white text-black border-2 border-black rounded-lg px-3 py-1.5 font-bold uppercase focus:outline-none focus:ring-2 focus:ring-black cursor-pointer shadow-sm">
-                <option value="0">Semua Soal Tersedia</option>
+                <option value="0">Semua Soal (80 Soal)</option>
                 <option value="15">15 Soal Ringkas</option>
                 <option value="30">30 Soal Ujian</option>
                 <option value="50">50 Soal Intensif</option>
+                <option value="80">80 Soal Lengkap</option>
               </select>
             </div>
 
@@ -238,6 +239,35 @@
             <!-- Exhibit Image (if present) -->
             <div id="q-image-container" class="hidden mb-6 p-4 bg-black/5 rounded-xl border-2 border-black/20 flex justify-center">
               <img id="q-image" src="" alt="Exhibit" class="max-h-72 object-contain rounded-lg border border-black/20 shadow-sm">
+            </div>
+
+            <!-- Packet Tracer Download Banner (if PT activity exists) -->
+            <div id="q-pt-container" class="hidden mb-6 p-4 bg-black text-[#FED000] rounded-xl border-2 border-black flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[2px_2px_0px_#000]">
+              <div class="flex items-center gap-3">
+                <span class="text-3xl">📦</span>
+                <div>
+                  <div class="font-extrabold text-sm uppercase tracking-wide text-white">Lab Cisco Packet Tracer (.pkt) Tersedia</div>
+                  <div class="text-xs text-white/80">Download file aktivitas simulasi Packet Tracer untuk menguji dan mengerjakan lab soal ini:</div>
+                </div>
+              </div>
+              <a id="q-pt-link" href="#" target="_blank" rel="noopener noreferrer" class="mixd-btn-primary text-xs whitespace-nowrap font-black py-2.5 px-4 shadow-[2px_2px_0px_#fff]">
+                Download .PKT File 📥
+              </a>
+            </div>
+
+            <!-- Interactive Matching Container (for Matching questions) -->
+            <div id="q-matching-container" class="hidden mb-6 space-y-4">
+              <div class="p-4 bg-black/5 rounded-xl border-2 border-black/20">
+                <div class="flex items-center justify-between mb-3 pb-2 border-b border-black/15">
+                  <div class="text-xs font-black uppercase tracking-wider text-black flex items-center gap-2">
+                    <span>🔄</span> Cocokkan Situasi dengan Media Jaringan:
+                  </div>
+                  <span class="text-[11px] font-bold text-black/70">Pilih media untuk tiap situasi</span>
+                </div>
+                <div id="q-matching-table" class="space-y-2.5">
+                  <!-- Dynamically rendered via JS -->
+                </div>
+              </div>
             </div>
 
             <!-- Shuffled Options -->
@@ -357,14 +387,14 @@
     </section>
 
     <!-- ============================================================= -->
-    <!-- TAB 3: BANK 70 SOAL & PEMBAHASAN                              -->
+    <!-- TAB 3: BANK 80 SOAL & PEMBAHASAN                              -->
     <!-- ============================================================= -->
     <section id="tab-bank" class="hidden space-y-6">
       
       <div class="mixd-card p-6">
         <div class="flex flex-col md:flex-row items-center justify-between gap-4">
           <div>
-            <h2 class="font-display font-extrabold text-xl uppercase tracking-tight text-black">Bank 70 Soal NetAcad</h2>
+            <h2 class="font-display font-extrabold text-xl uppercase tracking-tight text-black">Bank 80 Soal NetAcad</h2>
             <p class="text-xs text-black/80 font-bold">Buka dan baca seluruh pembahasan detail per-opsi secara langsung.</p>
           </div>
 
