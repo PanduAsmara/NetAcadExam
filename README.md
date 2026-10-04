@@ -2,7 +2,7 @@
 
 Platform pembelajaran interaktif dan simulasi ujian sertifikasi **Cisco Networking Academy (CCNA 1 v7)** untuk **Modules 4 – 7: Ethernet Concepts**.
 
-Live Deployment: **[https://ccna-learning-platform-seven.vercel.app](https://ccna-learning-platform-seven.vercel.app)**
+Live Deployment: **[https://netacad-exam.vercel.app](https://netacad-exam.vercel.app)**
 
 ---
 
